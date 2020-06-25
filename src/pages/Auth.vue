@@ -33,7 +33,7 @@
 export default {
   data () {
     return {
-      tab: 'signIn'
+      tab: 'login'
     }
   },
   components: {

@@ -34,6 +34,7 @@ export default {
               signIn(password: $password, username: $username) {
                 username
                 key
+                secret
               }
             }
             `,
@@ -42,17 +43,19 @@ export default {
               password: this.password
             }
           }).then(({ data }) => {
-            const { username, key } = data.signIn
-            TokenService.saveToken(JSON.stringify({
-              username,
-              key
-            }))
-            this.$router.push({
-              path: '/chat',
-              query: {
-                username
-              }
-            })
+            const { username, key, secret } = data.signIn
+            if (username === 'no existe') {
+              alert('Usiario no existe')
+            } else {
+              TokenService.saveToken(JSON.stringify({
+                username,
+                key,
+                secret
+              }))
+              this.$router.push({
+                path: '/chat'
+              })
+            }
           })
         } catch (error) {
           console.log(error)
@@ -72,7 +75,7 @@ export default {
               password: this.password
             }
           }).then(({ data }) => {
-            console.log(data.data)
+            alert('Usuario Registrado')
           })
         } catch (error) {
           console.log(error)

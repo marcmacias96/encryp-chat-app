@@ -32,6 +32,8 @@
 import gql from 'graphql-tag'
 import { TokenService } from '../service/Storage'
 import Encrypt from 'crypto-js'
+import NodeRSA from 'node-rsa'
+
 export default {
   name: 'PageIndex',
   components: {
@@ -47,6 +49,13 @@ export default {
       }
     },
     secret: {
+      type: String,
+      default () {
+        const savedData = JSON.parse(TokenService.getToken())
+        return savedData.secret
+      }
+    },
+    Pkey: {
       type: String,
       default () {
         const savedData = JSON.parse(TokenService.getToken())
@@ -69,7 +78,6 @@ export default {
             username: this.username,
             time: 'now()'
           }
-        }).then((data) => {
         })
       },
       3000
@@ -85,7 +93,8 @@ export default {
   methods: {
     sendMessage () {
       if (this.newMessage === '') return
-      this.ecryptmsg = Encrypt.AES.encrypt(this.newMessage, this.secret)
+      const Pkey = NodeRSA(this.Pkey)
+      this.ecryptmsg = Encrypt.AES.encrypt(this.newMessage, Pkey.decrypt(this.secret, 'utf8')).toString()
       this.$apollo.mutate({
         mutation: gql`
         mutation ($message: String, $username: String, $timestamp: timestamp) {
@@ -122,13 +131,16 @@ export default {
         }
       },
       update (data) {
+        const Pkey = NodeRSA(this.Pkey)
         const recivedMes = data.message.map((item) => {
-          item.content = Crypto.AES.decrypt(item.content, this.secret)
+          if (item.content.length === 44) {
+            const bytes = Encrypt.AES.decrypt(item.content, Pkey.decrypt(this.secret, 'utf8'))
+            item.content = bytes.toString(Encrypt.enc.Utf8)
+          }
           return item
         })
         return recivedMes
       },
-      fetchPolicy: 'cache-and-network',
       subscribeToMore: {
         document: gql`
         subscription {
@@ -141,8 +153,14 @@ export default {
         }
         `,
         updateQuery: (previousResult, { subscriptionData }) => {
+          const { TokenService } = require('../service/Storage')
+          const savedData = JSON.parse(TokenService.getToken())
+          const Pkey = NodeRSA(savedData.key)
           if (previousResult && !previousResult.message.some(item => item.id === subscriptionData.data.message[0].id)) {
-            subscriptionData.data.message[0].content = Encrypt.AES.decrypt(subscriptionData.data.message[0].content, this.secret)
+            if (subscriptionData.data.message.length > 0) {
+              const bytes = Encrypt.AES.decrypt(subscriptionData.data.message[0].content, Pkey.decrypt(savedData.secret, 'utf8'))
+              subscriptionData.data.message[0].content = bytes.toString(Encrypt.enc.Utf8)
+            }
             return {
               message: [
                 ...previousResult.message,

@@ -22,6 +22,7 @@
     "graphql": "^15.1.0",
     "graphql-tag": "^2.10.3",
     "node-fetch": "^2.6.0",
+    "node-rsa": "^1.0.8",
     "quasar": "^1.0.0",
     "vue-apollo": "^3.0.3"
   },
